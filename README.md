@@ -1,47 +1,13 @@
+The project's objective is to implement a web server that manages a static website composed of 3 HTML pages.
 
-Il progetto si pone come obiettivo di realizzare un server web che 
-gestisce un sito web statico formato da 3 pagine HTML. 
-Il server con protocollo HTTP si fonda su un unico socket in ascolto 
-su tutte le interfacce di rete alla porta 8080. il 
-server è basato sui protocolli AF_INET e il tipo SOCK_STREAM per 
-garantire una comunicazione affidabile di tipo TCP. Al momento del bind, 
-viene attivata l’opzione SO_REUSEADDR, che istruisce il sistema 
-operativo a rilasciare immediatamente la porta non appena il processo 
-termina, evitando errori di tipo “Address already in use” in fase di 
-restart. 
+The HTTP server is based on a single socket listening on all network interfaces on port 8080. The server is based on the AF_INET protocol and the SOCK_STREAM type to ensure reliable TCP communication. At bind time, the SO_REUSEADDR option is enabled; this instructs the operating system to release the port immediately as soon as the process terminates, thus avoiding "Address already in use" errors during restarts.
 
-Quando viene chiamato 'listen(1)', il sistema operativo prepara il 
-socket per accettare connessioni e crea una piccola coda in cui mettere 
-le richieste in arrivo. Quando un client si collega, quella richiesta 
-resta in attesa in coda finché non eseguiamo 'accept()'. A quel punto 
-'accept()' rimuove la richiesta dalla coda e restituisce un nuovo 
-socket: questo nuovo socket è usato esclusivamente per scambiare dati 
-con quel singolo client, mentre il socket originale continua a rimanere 
-in ascolto sulla stessa porta, pronto a ricevere altre connessioni.
+When 'listen(1)' is called, the operating system prepares the socket to accept connections and creates a small queue to hold incoming requests. When a client connects, that request remains pending in the queue until we execute 'accept()'. At that point, 'accept()' removes the request from the queue and returns a new socket. This new socket is used exclusively for exchanging data with that specific client, while the original socket continues to listen on the same port, ready to receive other connections.
 
-Il server legge dal socket i primi dati della richiesta HTTP e individua 
-la 'request‑line', da cui ricava il metodo e il percorso richiesto. Se 
-il percorso è “/”, lo trasformiamo in “/trails.html”. Altrimenti 
-togliamo eventuali “..” o slash iniziali per impedire che si navighi 
-fuori dalla cartella “www”. Infine controlliamo con commonpath che il 
-file si trovi davvero dentro “www”: se non è così, blocchiamo la 
-richiesta.
+The server reads the initial data of the HTTP request from the socket and identifies the 'request-line', from which it extracts the method and the requested path. If the path is “/”, it is transformed into “/trails.html”. Otherwise, any “..” or leading slashes are removed to prevent navigation outside the “www” folder. Finally, we use commonpath to verify that the file is actually within “www”; if not, the request is blocked.
 
-Una volta risolta la posizione del file, il server calcola il 
-content‑type tramite la libreria mimetypes, che associa l’estensione a 
-un tipo MIME standard (.html, .jpeg, .css, ecc.). Prima di inviare il 
-contenuto, si costruisce l’header HTTP includendo lo status code (200 o 
-404), l’intestazione Content-Type con charset UTF‑8 e Content-Length in 
-byte, seguiti da una doppia CRLF che separa gli header dal body. Il 
-corpo viene trasmesso in modalità raw‑binary con sendall(), assicurando 
-che l’intero buffer sia effettivamente recapitato al client.
+Once the file location is resolved, the server calculates the content-type using the mimetypes library, which maps the extension to a standard MIME type (.html, .jpeg, .css, etc.). Before sending the content, the HTTP header is constructed, including the status code (200 or 404), the Content-Type header with UTF-8 charset, and the Content-Length in bytes, followed by a double CRLF to separate the headers from the body. The body is transmitted in raw-binary mode using sendall(), ensuring the entire buffer is effectively delivered to the client.
 
-Parallelamente, ogni evento significativo — dall’avvio del listener, 
-all’accettazione di una connessione, al dettaglio della request‑line, 
-fino all’esito della risposta e alla chiusura del socket — viene 
-annotato sincronicamente su file di log con timestamp ISO‑style e 
-livello di gravità. Questo approccio fornisce riepilogo completo delle 
-interazioni, agevolando il debugging e il monitoraggio in produzione. 
+Concurrently, every significant event—from the listener startup, connection acceptance, request-line details, to the response outcome and socket closure—is synchronously recorded to a log file with an ISO-style timestamp and severity level. This approach provides a comprehensive summary of all interactions, facilitating debugging and monitoring in production.
 
-Terminato la comunicazione con il client chiudiamo lo scambio di dati e rilasciamo l'indirizzo della socket così che altri socket possano utilizzarlo.
-
+Once communication with the client is finished, we close the data exchange and release the socket address, so that other sockets may use it.
